@@ -1,0 +1,5 @@
+{
+  "name": "360 Comex – Packing Analyzer",
+  "description": "An intelligent web application from 360 Comex to analyze international trade Packing Lists. Upload or paste a packing list, and the AI will automatically verify its commercial and documentary validity, highlighting errors, missing information, or inconsistencies.",
+  "requestFramePermissions": []
+}
