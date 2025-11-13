@@ -1,11 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { type AnalysisResult } from '../types';
 
-const API_KEY = process.env.API_KEY;
-
-if (!API_KEY) {
-    throw new Error("API_KEY environment variable is not set.");
-}
+const API_KEY = "AIzaSyDPPyes3JWO2TR1bA3lgerKncmcsoXvpxM";
 
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
