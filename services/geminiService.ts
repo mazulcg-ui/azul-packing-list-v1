@@ -129,26 +129,52 @@ const buildPrompt = (packingListText: string, invoiceText?: string): string => {
 };
 
 export const analyzePackingList = async (packingListText: string, invoiceText?: string): Promise<AnalysisResult> => {
-    try {
-        const prompt = buildPrompt(packingListText, invoiceText);
+    const MAX_RETRIES = 3;
+    const INITIAL_DELAY_MS = 1000;
+    let lastError: any = null;
 
-        const response = await ai.models.generateContent({
-            // Se utiliza el modelo 'gemini-flash-latest' para optimizar la velocidad de respuesta.
-            model: 'gemini-flash-latest',
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: responseSchema,
-            },
-        });
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+            const prompt = buildPrompt(packingListText, invoiceText);
 
-        const jsonString = response.text.trim();
-        const result: AnalysisResult = JSON.parse(jsonString);
+            const response = await ai.models.generateContent({
+                // Se utiliza el modelo 'gemini-flash-latest' para optimizar la velocidad de respuesta.
+                model: 'gemini-flash-latest',
+                contents: prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: responseSchema,
+                },
+            });
 
-        return result;
+            const jsonString = response.text.trim();
+            const result: AnalysisResult = JSON.parse(jsonString);
 
-    } catch (error) {
-        console.error("Error analyzing document with Gemini:", error);
-        throw new Error("Failed to analyze packing list. The AI service may be temporarily unavailable or the response was invalid.");
+            return result; // Success!
+
+        } catch (error) {
+            lastError = error;
+            const errorMessage = String(error);
+
+            // Check if the error is a 503 "UNAVAILABLE" error, which is retriable.
+            if (errorMessage.includes("503") || errorMessage.toLowerCase().includes("unavailable")) {
+                console.warn(`Gemini API is overloaded (503). Attempt ${attempt + 1} of ${MAX_RETRIES} failed. Retrying...`);
+                
+                // If this isn't the last attempt, wait before retrying.
+                if (attempt < MAX_RETRIES - 1) {
+                    const delay = INITIAL_DELAY_MS * Math.pow(2, attempt); // Exponential backoff: 1s, 2s
+                    console.log(`Waiting for ${delay}ms before next retry.`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            } else {
+                // For other errors (e.g., 400 Bad Request), don't retry.
+                console.error("A non-retriable error occurred:", error);
+                throw new Error("Ocurrió un error inesperado al comunicarse con el servicio de IA.");
+            }
+        }
     }
+    
+    // If all retries have failed
+    console.error("Error analyzing document with Gemini after all retries:", lastError);
+    throw new Error("El servicio de IA está sobrecargado en este momento. Por favor, inténtelo de nuevo en unos momentos.");
 };

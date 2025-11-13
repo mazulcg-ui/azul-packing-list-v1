@@ -30,7 +30,11 @@ const App: React.FC = () => {
       setAnalysisResult(result);
     } catch (e) {
       console.error(e);
-      setError('Ocurrió un error al analizar el documento. Por favor, revisa la consola o inténtalo de nuevo.');
+      let errorMessage = 'Ocurrió un error al analizar el documento. Por favor, inténtalo de nuevo.';
+      if (e instanceof Error) {
+        errorMessage = e.message;
+      }
+      setError(errorMessage);
       setShowReport(false); // Hide report on error
     } finally {
       setIsLoading(false);
